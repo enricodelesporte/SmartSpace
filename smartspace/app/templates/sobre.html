@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}Sobre · SmartSpace{% endblock %}
+{% block content %}
+<section>
+  <a class="voltar" href="{{ url_for('paginas_conta.configuracoes') }}">{{ icone('chevron-left', 20) }}Configurações</a>
+  <div class="logo-wrap pequeno">
+    <img src="{{ url_for('static', filename='icons/logo.png') }}" alt="SmartSpace">
+  </div>
+  <div class="card info-card centro">
+    <h2>SmartSpace</h2>
+    <p>Reserva de espaços compartilhados do condomínio, como churrasqueira e salão de festas.</p>
+    <p class="muted">ExpoTech 2026.2 · Missão 2050<br>UniFECAF · ADS 3º semestre</p>
+  </div>
+</section>
+{% endblock %}

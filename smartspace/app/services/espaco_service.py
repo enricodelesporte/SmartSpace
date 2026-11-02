@@ -1,61 +1,41 @@
-"""
-Regras de negócio ligadas a espaços compartilhados.
-
-Só o Admin pode cadastrar/desativar espaços — a checagem de
-permissão fica aqui (não no repository, que só sabe falar com o
-banco, nem na rota, que não deveria conter regra de negócio).
-"""
-
-from __future__ import annotations
-
-from datetime import time
-
 from app.models.espaco import Espaco
-from app.models.usuario import Usuario
 from app.repositories.espaco_repository import EspacoRepository
-from app.utils.validators import validar_capacidade, validar_horario
-
-
-class PermissaoNegadaError(Exception):
-    """Levantada quando um usuário sem permissão tenta uma ação restrita."""
+from app.utils.excecoes import NaoEncontradoErro, ValidacaoErro
+from app.utils.validadores import validar_dados_espaco
 
 
 class EspacoService:
-    """Casos de uso: listar, cadastrar e desativar espaços."""
+    def __init__(self, repositorio=None):
+        self._espacos = repositorio or EspacoRepository()
 
-    def __init__(self, espaco_repository: EspacoRepository | None = None):
-        self.espaco_repository = espaco_repository or EspacoRepository()
+    def listar_ativos(self):
+        return self._espacos.listar_ativos()
 
-    def listar_disponiveis(self) -> list[Espaco]:
-        """Tela 'Espaços disponíveis' do morador."""
-        return self.espaco_repository.listar_ativos()
+    def buscar(self, id_espaco):
+        espaco = self._espacos.buscar_por_id(id_espaco)
+        if espaco is None:
+            raise NaoEncontradoErro("Espaço não encontrado")
+        return espaco
 
-    def cadastrar(
-        self,
-        solicitante: Usuario,
-        nome: str,
-        descricao: str | None,
-        capacidade_maxima,
-        horario_abertura: time,
-        horario_fechamento: time,
-    ) -> Espaco:
-        if not solicitante.pode_gerenciar_espacos():
-            raise PermissaoNegadaError("Apenas administradores podem cadastrar espaços.")
-        if not nome or not nome.strip():
-            raise ValueError("Nome do espaço é obrigatório.")
+    def cadastrar(self, dados):
+        campos = validar_dados_espaco(dados)
+        espaco = Espaco(**campos)
+        espaco.id_espaco = self._espacos.criar(espaco)
+        return self.buscar(espaco.id_espaco)
 
-        capacidade = validar_capacidade(capacidade_maxima)
-        validar_horario(horario_abertura, horario_fechamento)
+    def editar(self, id_espaco, dados):
+        espaco = self.buscar(id_espaco)
+        dados_atuais = espaco.para_dicionario()
+        dados_mesclados = {**dados_atuais, **dados}
+        campos = validar_dados_espaco(dados_mesclados)
+        espaco.atualizar_dados(**campos)
+        self._espacos.atualizar(espaco)
+        return espaco
 
-        return self.espaco_repository.criar(
-            nome=nome.strip(),
-            descricao=descricao,
-            capacidade_maxima=capacidade,
-            horario_abertura=horario_abertura,
-            horario_fechamento=horario_fechamento,
-        )
-
-    def desativar(self, solicitante: Usuario, id_espaco: int) -> None:
-        if not solicitante.pode_gerenciar_espacos():
-            raise PermissaoNegadaError("Apenas administradores podem desativar espaços.")
-        self.espaco_repository.desativar(id_espaco)
+    def desativar(self, id_espaco):
+        espaco = self.buscar(id_espaco)
+        if not espaco.ativo:
+            raise ValidacaoErro("Este espaço já está desativado")
+        espaco.desativar()
+        self._espacos.atualizar(espaco)
+        return espaco

@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}Gestão de espaços · SmartSpace{% endblock %}
+{% block content %}
+<section>
+  <h1>Gestão</h1>
+  <p class="page-sub">Cadastre espaços e acompanhe as reservas do condomínio.</p>
+  <div class="segmented">
+    <a class="active" href="{{ url_for('paginas_admin.espacos_admin') }}">Espaços</a>
+    <a href="{{ url_for('paginas_admin.reservas_admin') }}">Todas as reservas</a>
+  </div>
+  <a class="btn btn-lime add-btn" href="{{ url_for('paginas_admin.novo_espaco') }}">{{ icone('plus', 20) }}Novo espaço</a>
+  <div class="lista">
+    {% for espaco in espacos %}
+    <article class="card admin-item">
+      {% if espaco.imagem %}
+      <img class="thumb" src="{{ url_for('static', filename=espaco.imagem) }}" alt="">
+      {% else %}
+      <div class="thumb" aria-hidden="true">{{ espaco.nome[:1] }}</div>
+      {% endif %}
+      <div class="conteudo">
+        <div class="space-head">
+          <h2>{{ espaco.nome }}</h2>
+          <span class="badge">{{ icone('users', 14) }}{{ espaco.capacidade_maxima }} pessoas</span>
+        </div>
+        {% if espaco.descricao %}<p class="muted">{{ espaco.descricao }}</p>{% endif %}
+        <p class="meta">{{ icone('clock', 16) }}<span>Das {{ espaco.horario_abertura }} às {{ espaco.horario_fechamento }}</span></p>
+        <div class="actions">
+          <a class="btn btn-dark btn-sm" href="{{ url_for('paginas_admin.editar_espaco', id_espaco=espaco.id_espaco) }}">{{ icone('pencil', 16) }}Editar</a>
+          <form method="post" action="{{ url_for('paginas_admin.desativar_espaco', id_espaco=espaco.id_espaco) }}" data-confirmar="Desativar {{ espaco.nome }}? As reservas existentes serão mantidas.">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline btn-sm">{{ icone('ban', 16) }}Desativar</button>
+          </form>
+        </div>
+      </div>
+    </article>
+    {% else %}
+    <div class="vazio">
+      {{ icone('grid', 40) }}
+      <p>Nenhum espaço ativo. Cadastre o primeiro.</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}Entrar · SmartSpace{% endblock %}
+{% block classe_do_corpo %}pagina-login{% endblock %}
+{% block content %}
+<section class="login">
+  <div class="logo-wrap">
+    <img src="{{ url_for('static', filename='icons/logo.png') }}" alt="SmartSpace">
+  </div>
+  <h1>SmartSpace</h1>
+  <p class="subtitle">Reserva de espaços do condomínio</p>
+  <form method="post" class="form card-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="campo">
+      <span class="rotulo">E-mail</span>
+      <span class="entrada">{{ icone('mail') }}<input type="email" name="email" placeholder="voce@email.com" required value="{{ email }}" autocomplete="email"></span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">Senha</span>
+      <span class="entrada">{{ icone('lock') }}<input type="password" name="senha" placeholder="Sua senha" required autocomplete="current-password"><button type="button" class="alternar-senha" data-alternar-senha>Mostrar</button></span>
+    </label>
+    <button type="submit" class="btn btn-dark">Entrar</button>
+  </form>
+  <p class="hint">Ainda não tem conta? <a href="{{ url_for('paginas_conta.cadastro') }}">Cadastre-se</a></p>
+</section>
+{% endblock %}

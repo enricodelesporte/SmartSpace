@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}{{ 'Editar' if editando else 'Novo' }} espaço · SmartSpace{% endblock %}
+{% block content %}
+<section>
+  <a class="voltar" href="{{ url_for('paginas_admin.espacos_admin') }}">{{ icone('chevron-left', 20) }}Espaços</a>
+  <h1>{{ 'Editar espaço' if editando else 'Novo espaço' }}</h1>
+  <form method="post" class="form card-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="campo">
+      <span class="rotulo">Nome</span>
+      <span class="entrada"><input type="text" name="nome" value="{{ espaco.nome }}" required maxlength="100" placeholder="Ex.: Salão de Festas"></span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">Descrição <small>(opcional)</small></span>
+      <span class="entrada"><input type="text" name="descricao" value="{{ espaco.descricao or '' }}" maxlength="255" placeholder="Ex.: Espaço para eventos e comemorações"></span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">Capacidade máxima (pessoas)</span>
+      <span class="entrada">{{ icone('users') }}<input type="number" name="capacidade_maxima" value="{{ espaco.capacidade_maxima }}" required min="1" step="1" inputmode="numeric"></span>
+    </label>
+    <div class="linha-dupla">
+      <label class="campo">
+        <span class="rotulo">Abre às</span>
+        <span class="entrada">{{ icone('clock') }}<input type="time" name="horario_abertura" value="{{ espaco.horario_abertura }}" required></span>
+      </label>
+      <label class="campo">
+        <span class="rotulo">Fecha às</span>
+        <span class="entrada">{{ icone('clock') }}<input type="time" name="horario_fechamento" value="{{ espaco.horario_fechamento }}" required></span>
+      </label>
+    </div>
+    <button type="submit" class="btn btn-lime">{{ 'Salvar alterações' if editando else 'Cadastrar espaço' }}</button>
+  </form>
+</section>
+{% endblock %}

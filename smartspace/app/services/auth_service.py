@@ -1,48 +1,68 @@
-"""
-Regras de negócio de autenticação e cadastro.
-
-Atende os requisitos 4 (Validação de Dados) e 7 (Autenticação de
-Usuário), e implementa exatamente o fluxo desenhado no fluxograma:
-"Já possui conta?" -> Sim (login) / Não (cadastro, sempre como
-MORADOR, depois volta para a tela de login).
-"""
-
-from __future__ import annotations
-
-from app.models.usuario import TipoUsuario, Usuario
+from app.models.usuario import Admin, Morador, UsuarioFactory
 from app.repositories.usuario_repository import UsuarioRepository
-from app.utils.security import gerar_hash_senha, verificar_senha
-from app.utils.validators import validar_email, validar_senha
+from app.utils.excecoes import (
+    CredenciaisInvalidasErro,
+    EmailDuplicadoErro,
+    NaoAutenticadoErro,
+    PermissaoNegadaErro,
+    ValidacaoErro,
+)
+from app.utils.seguranca import gerar_hash, verificar_senha
+from app.utils.validadores import validar_email, validar_nome, validar_senha
 
 
 class AuthService:
-    """Casos de uso de autenticação: registrar() e autenticar()."""
+    def __init__(self, repositorio=None):
+        self._usuarios = repositorio or UsuarioRepository()
 
-    def __init__(self, usuario_repository: UsuarioRepository | None = None):
-        self.usuario_repository = usuario_repository or UsuarioRepository()
+    def cadastrar_morador(self, dados):
+        return self._criar_usuario(
+            dados.get("nome"), dados.get("email"), dados.get("senha"), Morador.TIPO
+        )
 
-    def registrar(self, nome: str, email: str, senha: str) -> Usuario:
-        """
-        Fluxo de 'Criar conta': valida os dados, garante e-mail
-        único e sempre cria como MORADOR (decisão tomada no
-        fluxograma — só um Admin promove alguém depois, se
-        precisar).
-        """
-        if not nome or not nome.strip():
-            raise ValueError("Nome é obrigatório.")
-        if not validar_email(email):
-            raise ValueError("E-mail inválido.")
-        if not validar_senha(senha):
-            raise ValueError("Senha deve ter no mínimo 6 caracteres.")
-        if self.usuario_repository.buscar_por_email(email):
-            raise ValueError("Já existe uma conta com este e-mail.")
+    def criar_admin(self, nome, email, senha):
+        return self._criar_usuario(nome, email, senha, Admin.TIPO)
 
-        senha_hash = gerar_hash_senha(senha)
-        return self.usuario_repository.criar(nome.strip(), email, senha_hash, TipoUsuario.MORADOR)
+    def _criar_usuario(self, nome, email, senha, tipo_usuario):
+        nome_validado = validar_nome(nome)
+        email_validado = validar_email(email)
+        senha_validada = validar_senha(senha)
+        if self._usuarios.buscar_por_email(email_validado) is not None:
+            raise EmailDuplicadoErro("E-mail já cadastrado")
+        usuario = UsuarioFactory.criar(
+            tipo_usuario, nome_validado, email_validado, gerar_hash(senha_validada)
+        )
+        usuario.id_usuario = self._usuarios.criar(usuario)
+        return self._usuarios.buscar_por_id(usuario.id_usuario)
 
-    def autenticar(self, email: str, senha: str) -> Usuario:
-        """Fluxo de 'Login': busca por e-mail e confere o hash da senha."""
-        usuario = self.usuario_repository.buscar_por_email(email)
+    def autenticar(self, dados):
+        email = dados.get("email")
+        senha = dados.get("senha")
+        if not isinstance(email, str) or not isinstance(senha, str):
+            raise ValidacaoErro("Informe email e senha")
+        usuario = self._usuarios.buscar_por_email(email.strip().lower())
         if usuario is None or not verificar_senha(senha, usuario.senha_hash):
-            raise ValueError("E-mail ou senha inválidos.")
+            raise CredenciaisInvalidasErro("E-mail ou senha inválidos")
+        if not usuario.ativo:
+            raise PermissaoNegadaErro("Usuário inativo")
+        return usuario
+
+    def buscar_usuario_logado(self, id_usuario):
+        usuario = self._usuarios.buscar_por_id(id_usuario)
+        if usuario is None or not usuario.ativo:
+            raise NaoAutenticadoErro("Sessão inválida, faça login novamente")
+        return usuario
+
+    def atualizar_perfil(self, usuario, dados):
+        if "nome" not in dados and "senha" not in dados:
+            raise ValidacaoErro("Informe nome e/ou senha para atualizar")
+        novo_nome = validar_nome(dados["nome"]) if "nome" in dados else usuario.nome
+        novo_hash = (
+            gerar_hash(validar_senha(dados["senha"]))
+            if "senha" in dados
+            else usuario.senha_hash
+        )
+        self._usuarios.atualizar_perfil(usuario.id_usuario, novo_nome, novo_hash)
+        usuario.alterar_nome(novo_nome)
+        usuario.alterar_senha_hash(novo_hash)
         return usuario

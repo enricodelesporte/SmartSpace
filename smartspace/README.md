@@ -1,89 +1,84 @@
-# SmartSpace — Back-end
+# SmartSpace
 
-Sistema de reserva de espaços compartilhados de um condomínio inteligente.
-Projeto acadêmico — ExpoTech 2026.2, categoria ARCHITECTURE (ADS 3º semestre, UniFECAF).
+Reserva de espaços compartilhados de um condomínio. Python + Flask + MySQL.
+Uma única aplicação serve as páginas (Jinja2) e a API JSON (`/api`).
 
-## Stack
+## Instalação no Windows (cmd)
 
-- **Linguagem:** Python
-- **Framework web:** Flask
-- **Banco de dados:** PostgreSQL
+1. Criar e ativar o ambiente virtual:
 
-## Estrutura de pastas
+       python -m venv venv
+       venv\Scripts\activate
 
-```
-smartspace/
-├── app/
-│   ├── models/          → entidades de domínio (POO: Usuario, Admin, Morador, Espaco, Reserva)
-│   ├── repositories/     → acesso a dados (todo o SQL fica isolado aqui)
-│   ├── services/         → regras de negócio (validação, conflito de horário, permissões)
-│   ├── routes/            → rotas Flask (endpoints da API)
-│   ├── utils/             → segurança (hash de senha), validadores, decorators de permissão
-│   ├── config.py          → configurações lidas do .env
-│   └── extensions.py      → conexão com o PostgreSQL
-├── database/
-│   └── schema_postgres.sql  → script DDL para criar o banco
-├── tests/
-│   └── test_reserva.py    → testes unitários da regra de conflito de horário
-├── run.py                 → ponto de entrada da aplicação
-├── requirements.txt
-└── .env.example
-```
+2. Instalar dependências:
 
-### Por que essa organização em camadas?
+       pip install -r requirements.txt
 
-- **models** conhece só a si mesmo (dados + regrinhas simples de cada entidade)
-- **repositories** conhece o banco, mas não sabe de regra de negócio
-- **services** conhece as regras de negócio, mas não sabe SQL nem HTTP
-- **routes** só traduz HTTP ↔ services
+3. Criar o arquivo `.env` a partir do exemplo e preencher usuário e senha do MySQL:
 
-Isso separa responsabilidades (Engenharia de Software) e facilita qualquer
-integrante do grupo entender e explicar uma parte isolada do sistema, sem
-precisar decorar o projeto inteiro.
+       copy .env.example .env
 
-## Como rodar
+4. Criar o banco e as tabelas (cria o banco se não existir, pode ser repetido e também
+   corrige acentos gravados errado por versões anteriores):
 
-1. Criar e ativar um ambiente virtual:
-   ```
-   python -m venv venv
-   venv\Scripts\activate      (Windows)
-   source venv/bin/activate   (Mac/Linux)
-   ```
-2. Instalar as dependências:
-   ```
-   pip install -r requirements.txt
-   ```
-3. Copiar `.env.example` para `.env` e preencher com os dados do seu PostgreSQL local.
-4. Criar o banco e rodar o schema:
-   ```
-   createdb smartspace
-   psql -d smartspace -f database/schema_postgres.sql
-   ```
-5. Rodar a aplicação:
-   ```
-   python run.py
-   ```
-6. Rodar os testes (não precisa de banco rodando):
-   ```
-   pytest
-   ```
+       python scripts\preparar_banco.py
 
-## Estado atual
+   Não use `mysql < schema_mysql.sql` pelo prompt do Windows: ele lê o arquivo na
+   codificação errada e grava `Salão` como `Sal├úo`. Se preferir o MySQL Workbench,
+   abra `database/schema_mysql.sql` nele e execute (raio).
 
-- [x] Models com herança (Usuario → Admin/Morador) e polimorfismo de permissões
-- [x] Repositories (acesso a dados) para as 3 tabelas
-- [x] Services com todas as regras de negócio, incluindo conflito de horário
-- [x] Rotas Flask funcionais como API JSON (login, cadastro, espaços, reservas)
-- [x] Testes unitários da regra de conflito de horário
-- [ ] Front-end (telas HTML) — próxima etapa, vai consumir estas mesmas rotas/serviços
+5. Criar o primeiro administrador:
 
-## ⚠️ Pontos de atenção do roteiro (não esquecer)
+       python scripts\criar_admin.py
 
-- **Avaliação individual em sala: 09 a 13/11/2026** — qualquer integrante do
-  grupo pode ser questionado sobre **qualquer parte** do código, não só a que
-  escreveu. Por isso todo arquivo aqui tem docstring explicando o "porquê",
-  não só o "o quê".
-- **O projeto não pode ser alterado depois da avaliação individual** —
-  terminar e testar tudo antes dessa data.
-- Ir anotando decisões técnicas e dificuldades ao longo do desenvolvimento
-  para facilitar a montagem da documentação final (planejada para perto do prazo).
+6. Iniciar o servidor e abrir http://127.0.0.1:5000
+
+       python run.py
+
+Ao iniciar, o servidor mostra qual usuário, host e banco está usando e testa a conexão.
+O `.env` tem prioridade sobre variáveis de ambiente do Windows.
+
+Banco criado antes desta versão: depois do passo 4, ajuste o horário da churrasqueira
+(pela tela Gestão > Espaços > Editar, ou pelo SQL abaixo):
+
+    UPDATE smartspace.espaco SET horario_abertura = '08:00', horario_fechamento = '22:00'
+    WHERE nome = 'Churrasqueira';
+
+## Telas
+
+| Tela | Rota | Quem |
+|------|------|------|
+| Login / Cadastro | `/login`, `/cadastro` | visitante |
+| Espaços | `/espacos` | logado |
+| Reservar (horários e valor) | `/reservar/<id>` | logado |
+| Reserva confirmada | `/reserva-confirmada/<id>` | dono da reserva |
+| Minhas reservas (cancelar) | `/minhas-reservas` | logado |
+| Configurações, Perfil, Sobre | `/configuracoes`, `/perfil`, `/sobre` | logado |
+| Gestão de espaços (cadastrar, editar, desativar) | `/admin/espacos` | admin |
+| Todas as reservas (filtros, cancelar qualquer) | `/admin/reservas` | admin |
+
+Horários oferecidos: churrasqueira 08:00–15:00, 16:00–22:00 e 08:00–22:00; salão de
+festas 08:00–22:00; demais espaços, o horário de funcionamento inteiro. Horários já
+ocupados na data aparecem como indisponíveis. O valor (R$ 80,00) é apenas exibido, não
+é gravado no banco.
+
+## API JSON
+
+Todas as rotas ficam sob `/api` (por exemplo `POST /api/auth/login`, `GET /api/espacos`,
+`POST /api/reservas`). Importar `postman/SmartSpace.postman_collection.json`; o Postman
+guarda o cookie de sessão: faça o login e depois chame as demais rotas.
+
+## Testes unitários (não precisam de banco)
+
+    python -m pytest
+
+## Estrutura
+
+    app/models/        Usuario, Admin, Morador, Espaco, Reserva
+    app/repositories/  SQL isolado, uma classe por tabela
+    app/services/      regras de negócio (auth, espaço, reserva, opções de horário)
+    app/routes/        API (auth, espacos, reservas) e páginas (conta, reservas, admin)
+    app/templates/     telas Jinja2
+    app/static/        CSS, JS, imagens e ícones
+    app/utils/         segurança, validadores, decorators, exceções, CSRF, textos
+    scripts/           criar_admin.py, preparar_banco.py

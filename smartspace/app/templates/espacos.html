@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}Espaços · SmartSpace{% endblock %}
+{% block content %}
+<section>
+  <h1>Olá, {{ usuario.nome.split()[0] }}</h1>
+  <p class="page-sub">Escolha um espaço para reservar.</p>
+  <div class="grid-espacos">
+    {% for espaco in espacos %}
+    <article class="card space-card">
+      <div class="space-media">
+        {% if espaco.imagem %}
+        <img class="space-photo" src="{{ url_for('static', filename=espaco.imagem) }}" alt="{{ espaco.nome }}">
+        {% else %}
+        <div class="space-photo placeholder" aria-hidden="true">{{ espaco.nome[:1] }}</div>
+        {% endif %}
+        <span class="badge badge-flutuante">{{ icone('users', 16) }}{{ espaco.capacidade_maxima }} pessoas</span>
+      </div>
+      <div class="space-body">
+        <h2>{{ espaco.nome }}</h2>
+        {% if espaco.descricao %}<p class="muted">{{ espaco.descricao }}</p>{% endif %}
+        <p class="meta">{{ icone('clock', 16) }}<span>Das {{ espaco.horario_abertura }} às {{ espaco.horario_fechamento }}</span></p>
+        <a class="btn btn-lime" href="{{ url_for('paginas_reservas.reservar', id_espaco=espaco.id_espaco) }}">Reservar</a>
+      </div>
+    </article>
+    {% else %}
+    <div class="vazio">
+      {{ icone('grid', 40) }}
+      <p>Nenhum espaço disponível no momento.</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

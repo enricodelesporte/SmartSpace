@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}Perfil · SmartSpace{% endblock %}
+{% block content %}
+<section>
+  <a class="voltar" href="{{ url_for('paginas_conta.configuracoes') }}">{{ icone('chevron-left', 20) }}Configurações</a>
+  <div class="perfil-topo">
+    <span class="avatar grande">{{ usuario.nome[:1]|upper }}</span>
+    <h1>{{ usuario.nome }}</h1>
+    <p class="muted">{{ usuario.email }}</p>
+    <span class="papel">{{ 'Administrador' if usuario.pode_gerenciar_espacos() else 'Morador' }}</span>
+  </div>
+  <form method="post" class="form card-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="campo">
+      <span class="rotulo">Nome</span>
+      <span class="entrada">{{ icone('user') }}<input type="text" name="nome" value="{{ usuario.nome }}" required maxlength="100"></span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">Nova senha <small>(deixe em branco para manter a atual)</small></span>
+      <span class="entrada">{{ icone('lock') }}<input type="password" name="senha" minlength="6" autocomplete="new-password" placeholder="Mínimo de 6 caracteres"><button type="button" class="alternar-senha" data-alternar-senha>Mostrar</button></span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">Confirme a nova senha</span>
+      <span class="entrada">{{ icone('lock') }}<input type="password" name="confirmar_senha" minlength="6" autocomplete="new-password" placeholder="Repita a nova senha"></span>
+    </label>
+    <button type="submit" class="btn btn-dark">Salvar alterações</button>
+  </form>
+</section>
+{% endblock %}

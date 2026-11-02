@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}Criar conta · SmartSpace{% endblock %}
+{% block classe_do_corpo %}pagina-login{% endblock %}
+{% block content %}
+<section class="login">
+  <div class="logo-wrap">
+    <img src="{{ url_for('static', filename='icons/logo.png') }}" alt="SmartSpace">
+  </div>
+  <h1>Criar conta</h1>
+  <p class="subtitle">Cadastro de morador</p>
+  <form method="post" class="form card-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <label class="campo">
+      <span class="rotulo">Nome</span>
+      <span class="entrada">{{ icone('user') }}<input type="text" name="nome" placeholder="Seu nome" required maxlength="100" value="{{ nome }}" autocomplete="name"></span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">E-mail</span>
+      <span class="entrada">{{ icone('mail') }}<input type="email" name="email" placeholder="voce@email.com" required maxlength="150" value="{{ email }}" autocomplete="email"></span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">Senha</span>
+      <span class="entrada">{{ icone('lock') }}<input type="password" name="senha" placeholder="Mínimo de 6 caracteres" required minlength="6" autocomplete="new-password"><button type="button" class="alternar-senha" data-alternar-senha>Mostrar</button></span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">Confirme a senha</span>
+      <span class="entrada">{{ icone('lock') }}<input type="password" name="confirmar_senha" placeholder="Repita a senha" required minlength="6" autocomplete="new-password"></span>
+    </label>
+    <button type="submit" class="btn btn-dark">Cadastrar</button>
+  </form>
+  <p class="hint">Já tem conta? <a href="{{ url_for('paginas_conta.login') }}">Entrar</a></p>
+</section>
+{% endblock %}

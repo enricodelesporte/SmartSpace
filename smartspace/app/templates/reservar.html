@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}Reservar {{ espaco.nome }} · SmartSpace{% endblock %}
+{% block content %}
+<section>
+  <a class="voltar" href="{{ url_for('paginas_reservas.espacos') }}">{{ icone('chevron-left', 20) }}Espaços</a>
+  <h1>Reservar {{ espaco.nome }}</h1>
+  <div class="reservar-layout">
+    <div class="coluna-info">
+      {% if imagem %}
+      <img class="space-photo hero" src="{{ url_for('static', filename=imagem) }}" alt="{{ espaco.nome }}">
+      {% else %}
+      <div class="space-photo hero placeholder" aria-hidden="true">{{ espaco.nome[:1] }}</div>
+      {% endif %}
+      <div class="card info-card">
+        <p class="meta">{{ icone('users', 18) }}<span>Até {{ espaco.capacidade_maxima }} pessoas</span></p>
+        <p class="meta">{{ icone('clock', 18) }}<span>Funciona das {{ espaco.horario_abertura }} às {{ espaco.horario_fechamento }}</span></p>
+        {% if espaco.descricao %}<p class="meta">{{ icone('info', 18) }}<span>{{ espaco.descricao }}</span></p>{% endif %}
+      </div>
+    </div>
+
+    <div class="coluna-form">
+      <form method="get" class="form" id="form-data">
+        <label class="campo">
+          <span class="rotulo">Data da reserva</span>
+          <span class="entrada">{{ icone('calendar') }}<input type="date" name="data" value="{{ data_iso }}" min="{{ hoje_iso }}" required></span>
+          <span class="data-extenso">{{ data_iso|data_extenso }}</span>
+        </label>
+        <noscript><button type="submit" class="btn btn-dark">Ver horários</button></noscript>
+      </form>
+
+      <form method="post" class="form reserve-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="data" value="{{ data_iso }}">
+
+        <fieldset class="slots">
+          <legend>Horários disponíveis</legend>
+          {% for opcao in opcoes %}
+          <label class="slot {{ '' if opcao.disponivel else 'indisponivel' }}">
+            <input type="radio" name="horario" value="{{ opcao.id_opcao }}" {% if opcao.id_opcao == opcao_padrao %}checked{% endif %} {% if not opcao.disponivel %}disabled{% endif %}>
+            <span class="slot-corpo">
+              {{ icone('clock', 22) }}
+              <span class="slot-texto">
+                <strong>{{ opcao.rotulo }}</strong>
+                <small>{{ opcao.descricao }}</small>
+              </span>
+              {% if opcao.disponivel %}
+              <span class="slot-marca">{{ icone('check', 14) }}</span>
+              {% else %}
+              <span class="tag-indisponivel">Indisponível</span>
+              {% endif %}
+            </span>
+          </label>
+          {% endfor %}
+          {% if not opcao_padrao %}
+          <p class="aviso-vazio">{{ icone('alert', 18) }}Nenhum horário disponível nesta data. Tente outro dia.</p>
+          {% endif %}
+        </fieldset>
+
+        <div class="price-box">
+          {{ icone('coin', 26) }}
+          <div>
+            <span class="muted">Valor da reserva</span>
+            <strong class="valor">{{ valor_reserva }}</strong>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-lime" {% if not opcao_padrao %}disabled{% endif %}>Confirmar reserva</button>
+      </form>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% from "_reservas.html" import cartao_reserva %}
+{% block title %}Todas as reservas · SmartSpace{% endblock %}
+{% block content %}
+<section>
+  <h1>Gestão</h1>
+  <p class="page-sub">Cadastre espaços e acompanhe as reservas do condomínio.</p>
+  <div class="segmented">
+    <a href="{{ url_for('paginas_admin.espacos_admin') }}">Espaços</a>
+    <a class="active" href="{{ url_for('paginas_admin.reservas_admin') }}">Todas as reservas</a>
+  </div>
+  <form method="get" class="form filtro card">
+    <label class="campo">
+      <span class="rotulo">Espaço</span>
+      <span class="entrada">{{ icone('grid') }}
+        <select name="id_espaco">
+          <option value="">Todos os espaços</option>
+          {% for espaco in espacos %}
+          <option value="{{ espaco.id_espaco }}" {% if filtro_espaco == espaco.id_espaco %}selected{% endif %}>{{ espaco.nome }}</option>
+          {% endfor %}
+        </select>
+      </span>
+    </label>
+    <label class="campo">
+      <span class="rotulo">Data</span>
+      <span class="entrada">{{ icone('calendar') }}<input type="date" name="data" value="{{ filtro_data }}"></span>
+    </label>
+    <button type="submit" class="btn btn-dark">{{ icone('filter', 18) }}Filtrar</button>
+  </form>
+  <div class="lista">
+    {% for reserva in reservas %}{{ cartao_reserva(reserva, csrf_token(), true, 'admin') }}{% else %}
+    <div class="vazio">
+      {{ icone('calendar', 40) }}
+      <p>Nenhuma reserva encontrada.</p>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

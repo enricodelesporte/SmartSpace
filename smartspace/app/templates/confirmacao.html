@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}Reserva confirmada · SmartSpace{% endblock %}
+{% block content %}
+<section class="success">
+  <div class="check">{{ icone('check', 48) }}</div>
+  <h1>Reserva confirmada!</h1>
+  <p class="page-sub">Tudo certo. Veja os detalhes abaixo.</p>
+  <div class="resumo">
+    <div class="resumo-linha">{{ icone('grid', 22) }}<div><span class="rotulo">Espaço</span><strong>{{ reserva.nome_espaco }}</strong></div></div>
+    <div class="resumo-linha">{{ icone('calendar', 22) }}<div><span class="rotulo">Data</span><strong>{{ reserva.data_reserva|data_extenso }}</strong></div></div>
+    <div class="resumo-linha">{{ icone('clock', 22) }}<div><span class="rotulo">Horário</span><strong>{{ reserva.hora_inicio }} às {{ reserva.hora_fim }}</strong></div></div>
+    <div class="resumo-linha">{{ icone('coin', 22) }}<div><span class="rotulo">Valor</span><strong>{{ valor_reserva }}</strong></div></div>
+  </div>
+  <div class="acoes-centro">
+    <a class="btn btn-dark" href="{{ url_for('paginas_reservas.minhas_reservas') }}">Ver minhas reservas</a>
+    <a class="btn btn-ghost" href="{{ url_for('paginas_reservas.espacos') }}">Fazer outra reserva</a>
+  </div>
+</section>
+{% endblock %}

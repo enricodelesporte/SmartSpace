@@ -1,26 +1,20 @@
-"""
-Configurações centrais da aplicação.
-
-Tudo que muda entre ambientes (senha de banco, chave secreta etc.)
-vem de variáveis de ambiente, nunca hardcoded no código — boa
-prática de Engenharia de Software e evita vazar credenciais se o
-repositório for público.
-"""
-
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-load_dotenv()
+BASE_DIR = Path(__file__).resolve().parent.parent
+CAMINHO_ENV = BASE_DIR / ".env"
+
+load_dotenv(CAMINHO_ENV, override=True)
 
 
-class Config:
-    """Configuração única da aplicação, lida do arquivo .env (ver .env.example)."""
-
-    SECRET_KEY = os.getenv("SECRET_KEY", "chave-temporaria-trocar-em-producao")
-
+class Configuracao:
+    SECRET_KEY = os.getenv("SECRET_KEY", "")
     DB_HOST = os.getenv("DB_HOST", "localhost")
-    DB_PORT = os.getenv("DB_PORT", "5432")
-    DB_NAME = os.getenv("DB_NAME", "smartspace")
-    DB_USER = os.getenv("DB_USER", "postgres")
+    DB_PORT = int(os.getenv("DB_PORT", "3306"))
+    DB_USER = os.getenv("DB_USER", "")
     DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+    DB_NAME = os.getenv("DB_NAME", "smartspace")
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = "Lax"

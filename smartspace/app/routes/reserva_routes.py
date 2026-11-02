@@ -1,87 +1,45 @@
-"""
-Rotas de reserva: criar, listar (próprias ou todas) e cancelar.
+from flask import Blueprint, g, request
 
-O status HTTP 409 (Conflict) em `criar()` é proposital: combina
-diretamente com o pop-up "Horário indisponível" desenhado no
-protótipo de telas, então o front-end pode identificar esse caso
-especificamente pelo código de status.
-"""
+from app.services.reserva_service import ReservaService
+from app.utils.decoradores import login_obrigatorio
+from app.utils.requisicao import ler_json_obrigatorio, sucesso
+from app.utils.validadores import validar_data, validar_inteiro_positivo
 
-from __future__ import annotations
-
-from datetime import date, time
-
-from flask import Blueprint, jsonify, request
-
-from app.services.espaco_service import PermissaoNegadaError
-from app.services.reserva_service import ConflitoDeHorarioError, ReservaService
-from app.utils.decorators import login_required
-
-reserva_bp = Blueprint("reserva", __name__, url_prefix="/reservas")
+reserva_bp = Blueprint("reservas", __name__, url_prefix="/api/reservas")
 reserva_service = ReservaService()
 
 
-@reserva_bp.route("", methods=["POST"])
-@login_required
-def criar(usuario):
-    """Tela 'Fazer reserva' do morador."""
-    dados = request.get_json(silent=True) or {}
-    try:
-        reserva = reserva_service.criar_reserva(
-            morador=usuario,
-            id_espaco=dados.get("id_espaco"),
-            data_reserva=date.fromisoformat(dados.get("data_reserva", "")),
-            hora_inicio=time.fromisoformat(dados.get("hora_inicio", "00:00")),
-            hora_fim=time.fromisoformat(dados.get("hora_fim", "00:00")),
-        )
-    except ConflitoDeHorarioError as erro:
-        return jsonify({"erro": str(erro)}), 409
-    except ValueError as erro:
-        return jsonify({"erro": str(erro)}), 400
-
-    return jsonify({"mensagem": "Reserva confirmada.", "reserva": _serializar(reserva)}), 201
+@reserva_bp.post("")
+@login_obrigatorio
+def criar_reserva():
+    reserva = reserva_service.criar(g.usuario, ler_json_obrigatorio())
+    return sucesso(reserva.para_dicionario(), "Reserva confirmada com sucesso", 201)
 
 
-@reserva_bp.route("/minhas", methods=["GET"])
-@login_required
-def minhas(usuario):
-    """Tela 'Minhas Reservas' do morador."""
-    reservas = reserva_service.listar_minhas_reservas(usuario)
-    return jsonify([_serializar(r) for r in reservas])
+@reserva_bp.get("/minhas")
+@login_obrigatorio
+def listar_minhas_reservas():
+    reservas = reserva_service.listar_do_usuario(g.usuario)
+    return sucesso([reserva.para_dicionario() for reserva in reservas])
 
 
-@reserva_bp.route("", methods=["GET"])
-@login_required
-def todas(usuario):
-    """Tela 'Todas as Reservas' do admin."""
-    try:
-        reservas = reserva_service.listar_todas(usuario)
-    except PermissaoNegadaError as erro:
-        return jsonify({"erro": str(erro)}), 403
-    return jsonify([_serializar(r) for r in reservas])
+@reserva_bp.get("")
+@login_obrigatorio
+def listar_todas_as_reservas():
+    id_espaco_texto = request.args.get("id_espaco")
+    data_texto = request.args.get("data")
+    id_espaco = (
+        validar_inteiro_positivo(id_espaco_texto, "id_espaco")
+        if id_espaco_texto
+        else None
+    )
+    data_reserva = validar_data(data_texto, "data") if data_texto else None
+    reservas = reserva_service.listar_todas(g.usuario, id_espaco, data_reserva)
+    return sucesso([reserva.para_dicionario() for reserva in reservas])
 
 
-@reserva_bp.route("/<int:id_reserva>/cancelar", methods=["POST"])
-@login_required
-def cancelar(usuario, id_reserva):
-    """Botão 'Cancelar reserva', tanto do morador quanto do admin."""
-    try:
-        reserva_service.cancelar(usuario, id_reserva)
-    except PermissaoNegadaError as erro:
-        return jsonify({"erro": str(erro)}), 403
-    except ValueError as erro:
-        return jsonify({"erro": str(erro)}), 404
-
-    return jsonify({"mensagem": "Reserva cancelada."})
-
-
-def _serializar(reserva) -> dict:
-    return {
-        "id_reserva": reserva.id_reserva,
-        "id_usuario": reserva.id_usuario,
-        "id_espaco": reserva.id_espaco,
-        "data_reserva": reserva.data_reserva.isoformat(),
-        "hora_inicio": reserva.hora_inicio.strftime("%H:%M"),
-        "hora_fim": reserva.hora_fim.strftime("%H:%M"),
-        "status": reserva.status.value,
-    }
+@reserva_bp.post("/<int:id_reserva>/cancelar")
+@login_obrigatorio
+def cancelar_reserva(id_reserva):
+    reserva = reserva_service.cancelar(g.usuario, id_reserva)
+    return sucesso(reserva.para_dicionario(), "Reserva cancelada com sucesso")

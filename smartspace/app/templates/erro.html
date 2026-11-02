@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}Erro {{ codigo }} · SmartSpace{% endblock %}
+{% block content %}
+<section class="success">
+  <div class="check erro-icone">{{ icone('alert', 48) }}</div>
+  <h1>Ops! Erro {{ codigo }}</h1>
+  <p class="page-sub">{{ mensagem }}</p>
+  <div class="acoes-centro">
+    <a class="btn btn-dark" href="{{ url_for('paginas_conta.inicio') }}">Voltar ao início</a>
+  </div>
+</section>
+{% endblock %}

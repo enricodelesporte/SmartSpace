@@ -1,96 +1,100 @@
-"""
-Regras de negócio de reserva — o coração do sistema.
-
-Inclui `esta_disponivel()`, citado literalmente no comentário do
-script SQL do banco como a regra "validada na camada de aplicação,
-no método esta_disponivel() da classe Espaco". Aqui ela vive no
-service (mantendo o model Espaco mais simples), mas o nome e o
-comportamento são exatamente os combinados na modelagem.
-"""
-
-from __future__ import annotations
-
-from datetime import date, time
-
-from app.models.espaco import Espaco
-from app.models.reserva import Reserva, StatusReserva
-from app.models.usuario import Usuario
+from app.database import transacao
+from app.models.reserva import Reserva
 from app.repositories.espaco_repository import EspacoRepository
 from app.repositories.reserva_repository import ReservaRepository
-from app.services.espaco_service import PermissaoNegadaError
-from app.utils.validators import validar_horario
-
-
-class ConflitoDeHorarioError(Exception):
-    """Levantada quando o horário pedido colide com uma reserva já confirmada."""
+from app.services.opcoes_horario import gerar_opcoes
+from app.utils.excecoes import (
+    ConflitoHorarioErro,
+    NaoEncontradoErro,
+    PermissaoNegadaErro,
+    ValidacaoErro,
+)
+from app.utils.tempo import formatar_hora
+from app.utils.validadores import (
+    validar_data,
+    validar_data_nao_passada,
+    validar_hora,
+    validar_inteiro_positivo,
+    validar_intervalo_horario,
+)
 
 
 class ReservaService:
-    """Casos de uso: criar, listar e cancelar reservas."""
+    def __init__(self, repositorio_reservas=None, repositorio_espacos=None):
+        self._reservas = repositorio_reservas or ReservaRepository()
+        self._espacos = repositorio_espacos or EspacoRepository()
 
-    def __init__(
-        self,
-        reserva_repository: ReservaRepository | None = None,
-        espaco_repository: EspacoRepository | None = None,
-    ):
-        self.reserva_repository = reserva_repository or ReservaRepository()
-        self.espaco_repository = espaco_repository or EspacoRepository()
+    def criar(self, usuario, dados):
+        id_espaco = validar_inteiro_positivo(dados.get("id_espaco"), "id_espaco")
+        data_reserva = validar_data(dados.get("data_reserva"), "data_reserva")
+        hora_inicio = validar_hora(dados.get("hora_inicio"), "hora_inicio")
+        hora_fim = validar_hora(dados.get("hora_fim"), "hora_fim")
+        validar_intervalo_horario(hora_inicio, hora_fim)
+        validar_data_nao_passada(data_reserva)
 
-    def esta_disponivel(self, espaco: Espaco, data_reserva: date, hora_inicio: time, hora_fim: time) -> bool:
-        """
-        Busca as reservas já CONFIRMADAs do mesmo espaço/data e
-        verifica se alguma delas se sobrepõe ao horário pedido
-        (Reserva.sobrepoe cuida da comparação de intervalos).
-        """
-        candidata = Reserva(
-            id_reserva=None,
-            id_usuario=0,
-            id_espaco=espaco.id_espaco,
-            data_reserva=data_reserva,
-            hora_inicio=hora_inicio,
-            hora_fim=hora_fim,
+        with transacao() as conexao:
+            espaco = self._espacos.buscar_por_id(id_espaco, conexao, bloquear=True)
+            if espaco is None:
+                raise NaoEncontradoErro("Espaço não encontrado")
+            if not espaco.ativo:
+                raise ValidacaoErro("Este espaço está desativado")
+            if not espaco.comporta_horario(hora_inicio, hora_fim):
+                raise ValidacaoErro("Horário fora do funcionamento do espaço")
+
+            nova_reserva = Reserva(
+                usuario.id_usuario, id_espaco, data_reserva, hora_inicio, hora_fim
+            )
+            reservas_existentes = self._reservas.listar_confirmadas_do_espaco_na_data(
+                id_espaco, data_reserva, conexao
+            )
+            if not espaco.esta_disponivel(nova_reserva, reservas_existentes):
+                raise ConflitoHorarioErro("Horário indisponível")
+
+            nova_reserva.id_reserva = self._reservas.criar(nova_reserva, conexao)
+            return self._reservas.buscar_por_id(nova_reserva.id_reserva, conexao)
+
+    def listar_opcoes_de_horario(self, espaco, data_reserva):
+        reservas_confirmadas = self._reservas.listar_confirmadas_do_espaco_na_data(
+            espaco.id_espaco, data_reserva
         )
-        existentes = self.reserva_repository.listar_por_espaco_e_data(espaco.id_espaco, data_reserva)
-        return not any(candidata.sobrepoe(existente) for existente in existentes)
+        return gerar_opcoes(espaco, reservas_confirmadas, data_reserva)
 
-    def criar_reserva(
-        self,
-        morador: Usuario,
-        id_espaco: int,
-        data_reserva: date,
-        hora_inicio: time,
-        hora_fim: time,
-    ) -> Reserva:
-        """Fluxo 'Fazer reserva' do fluxograma, com todas as validações do caminho."""
-        validar_horario(hora_inicio, hora_fim)
+    def reservar_opcao(self, usuario, espaco, data_texto, id_opcao):
+        data_reserva = validar_data(data_texto, "data")
+        opcoes = gerar_opcoes(espaco, [], data_reserva)
+        escolhida = next((o for o in opcoes if o.id_opcao == id_opcao), None)
+        if escolhida is None:
+            raise ValidacaoErro("Escolha um horário")
+        return self.criar(
+            usuario,
+            {
+                "id_espaco": espaco.id_espaco,
+                "data_reserva": data_reserva.isoformat(),
+                "hora_inicio": formatar_hora(escolhida.hora_inicio),
+                "hora_fim": formatar_hora(escolhida.hora_fim),
+            },
+        )
 
-        espaco = self.espaco_repository.buscar_por_id(id_espaco)
-        if espaco is None or not espaco.ativo:
-            raise ValueError("Espaço não encontrado ou inativo.")
-        if not espaco.dentro_do_horario_de_funcionamento(hora_inicio, hora_fim):
-            raise ValueError("Horário fora do funcionamento do espaço.")
-        if not self.esta_disponivel(espaco, data_reserva, hora_inicio, hora_fim):
-            raise ConflitoDeHorarioError("Horário indisponível para este espaço.")
+    def buscar_propria(self, usuario, id_reserva):
+        reserva = self._reservas.buscar_por_id(id_reserva)
+        if reserva is None or reserva.id_usuario != usuario.id_usuario:
+            raise NaoEncontradoErro("Reserva não encontrada")
+        return reserva
 
-        return self.reserva_repository.criar(morador.id_usuario, id_espaco, data_reserva, hora_inicio, hora_fim)
+    def listar_do_usuario(self, usuario):
+        return self._reservas.listar_do_usuario(usuario.id_usuario)
 
-    def listar_minhas_reservas(self, usuario: Usuario) -> list[Reserva]:
-        return self.reserva_repository.listar_por_usuario(usuario.id_usuario)
+    def listar_todas(self, usuario, id_espaco=None, data_reserva=None):
+        if not usuario.pode_ver_todas_as_reservas():
+            raise PermissaoNegadaErro("Apenas administradores veem todas as reservas")
+        return self._reservas.listar_todas(id_espaco, data_reserva)
 
-    def listar_todas(self, solicitante: Usuario) -> list[Reserva]:
-        if not solicitante.pode_gerenciar_qualquer_reserva():
-            raise PermissaoNegadaError("Apenas administradores podem ver todas as reservas.")
-        return self.reserva_repository.listar_todas()
-
-    def cancelar(self, solicitante: Usuario, id_reserva: int) -> None:
-        """Um morador só cancela a própria reserva; o admin cancela qualquer uma."""
-        reserva = self.reserva_repository.buscar_por_id(id_reserva)
+    def cancelar(self, usuario, id_reserva):
+        reserva = self._reservas.buscar_por_id(id_reserva)
         if reserva is None:
-            raise ValueError("Reserva não encontrada.")
-
-        eh_dono = reserva.id_usuario == solicitante.id_usuario
-        eh_admin = solicitante.pode_gerenciar_qualquer_reserva()
-        if not (eh_dono or eh_admin):
-            raise PermissaoNegadaError("Você não tem permissão para cancelar esta reserva.")
-
-        self.reserva_repository.cancelar(id_reserva)
+            raise NaoEncontradoErro("Reserva não encontrada")
+        if not usuario.pode_cancelar_reserva(reserva):
+            raise PermissaoNegadaErro("Você só pode cancelar as suas próprias reservas")
+        reserva.cancelar()
+        self._reservas.atualizar_status(reserva)
+        return reserva

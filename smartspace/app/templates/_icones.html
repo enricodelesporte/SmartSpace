@@ -1,0 +1,47 @@
+{% macro icone(nome, tamanho=20) -%}
+<svg class="icone" width="{{ tamanho }}" height="{{ tamanho }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{%- if nome == 'calendar' -%}
+<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>
+{%- elif nome == 'calendar-check' -%}
+<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18m-11 5 2 2 4-4"/>
+{%- elif nome == 'clock' -%}
+<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>
+{%- elif nome == 'user' -%}
+<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+{%- elif nome == 'users' -%}
+<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+{%- elif nome == 'mail' -%}
+<rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/>
+{%- elif nome == 'lock' -%}
+<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+{%- elif nome == 'grid' -%}
+<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
+{%- elif nome == 'shield' -%}
+<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+{%- elif nome == 'logout' -%}
+<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/>
+{%- elif nome == 'plus' -%}
+<path d="M12 5v14M5 12h14"/>
+{%- elif nome == 'check' -%}
+<path d="M20 6 9 17l-5-5"/>
+{%- elif nome == 'check-circle' -%}
+<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>
+{%- elif nome == 'alert' -%}
+<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>
+{%- elif nome == 'pencil' -%}
+<path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/>
+{%- elif nome == 'ban' -%}
+<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>
+{%- elif nome == 'chevron-right' -%}
+<path d="m9 18 6-6-6-6"/>
+{%- elif nome == 'chevron-left' -%}
+<path d="m15 18-6-6 6-6"/>
+{%- elif nome == 'coin' -%}
+<circle cx="12" cy="12" r="10"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 18V6"/>
+{%- elif nome == 'filter' -%}
+<path d="M22 3H2l8 9.46V19l4 2v-8.54z"/>
+{%- elif nome == 'info' -%}
+<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}

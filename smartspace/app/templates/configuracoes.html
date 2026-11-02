@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% block title %}Configurações · SmartSpace{% endblock %}
+{% block content %}
+<section class="settings">
+  <div class="settings-hero">
+    <span class="avatar grande">{{ usuario.nome[:1]|upper }}</span>
+    <h1>{{ usuario.nome }}</h1>
+    <span class="papel">{{ 'Administrador' if usuario.pode_gerenciar_espacos() else 'Morador' }}</span>
+  </div>
+  <div class="card menu">
+    <a href="{{ url_for('paginas_conta.perfil') }}">{{ icone('user', 22) }}<span>Perfil</span>{{ icone('chevron-right', 18) }}</a>
+    {% if usuario.pode_gerenciar_espacos() %}
+    <a href="{{ url_for('paginas_admin.espacos_admin') }}">{{ icone('grid', 22) }}<span>Gerenciar espaços</span>{{ icone('chevron-right', 18) }}</a>
+    <a href="{{ url_for('paginas_admin.reservas_admin') }}">{{ icone('calendar-check', 22) }}<span>Todas as reservas</span>{{ icone('chevron-right', 18) }}</a>
+    {% endif %}
+    <a href="{{ url_for('paginas_conta.sobre') }}">{{ icone('info', 22) }}<span>Sobre o app</span>{{ icone('chevron-right', 18) }}</a>
+    <form method="post" action="{{ url_for('paginas_conta.sair') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="menu-btn">{{ icone('logout', 22) }}<span>Sair</span>{{ icone('chevron-right', 18) }}</button>
+    </form>
+  </div>
+</section>
+{% endblock %}

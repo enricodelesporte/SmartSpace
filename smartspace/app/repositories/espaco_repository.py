@@ -1,64 +1,50 @@
-"""
-Camada de acesso a dados (Repository) para a tabela `espaco`.
-"""
-
-from __future__ import annotations
-
-from datetime import time
-
-from app.extensions import get_connection
+from app.database import consultar, consultar_um, executar
 from app.models.espaco import Espaco
 
 
 class EspacoRepository:
-    """Métodos de leitura e escrita da tabela `espaco`."""
+    def buscar_por_id(self, id_espaco, conexao=None, bloquear=False):
+        sql = "SELECT * FROM espaco WHERE id_espaco = %s"
+        if bloquear:
+            sql += " FOR UPDATE"
+        registro = consultar_um(sql, (id_espaco,), conexao)
+        return Espaco.a_partir_do_registro(registro) if registro else None
 
-    def listar_ativos(self) -> list[Espaco]:
-        with get_connection() as conn, conn.cursor() as cur:
-            cur.execute("SELECT * FROM espaco WHERE ativo = TRUE ORDER BY nome")
-            rows = cur.fetchall()
-            return [self._to_espaco(r) for r in rows]
+    def listar_ativos(self, conexao=None):
+        registros = consultar(
+            "SELECT * FROM espaco WHERE ativo = TRUE ORDER BY nome", (), conexao
+        )
+        return [Espaco.a_partir_do_registro(registro) for registro in registros]
 
-    def buscar_por_id(self, id_espaco: int) -> Espaco | None:
-        with get_connection() as conn, conn.cursor() as cur:
-            cur.execute("SELECT * FROM espaco WHERE id_espaco = %s", (id_espaco,))
-            row = cur.fetchone()
-            return self._to_espaco(row) if row else None
+    def criar(self, espaco, conexao=None):
+        return executar(
+            "INSERT INTO espaco (nome, descricao, capacidade_maxima, "
+            "horario_abertura, horario_fechamento, ativo) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
+            (
+                espaco.nome,
+                espaco.descricao,
+                espaco.capacidade_maxima,
+                espaco.horario_abertura,
+                espaco.horario_fechamento,
+                espaco.ativo,
+            ),
+            conexao,
+        )
 
-    def criar(
-        self,
-        nome: str,
-        descricao: str | None,
-        capacidade_maxima: int,
-        horario_abertura: time,
-        horario_fechamento: time,
-    ) -> Espaco:
-        with get_connection() as conn, conn.cursor() as cur:
-            cur.execute(
-                """
-                INSERT INTO espaco (nome, descricao, capacidade_maxima, horario_abertura, horario_fechamento)
-                VALUES (%s, %s, %s, %s, %s)
-                RETURNING *
-                """,
-                (nome, descricao, capacidade_maxima, horario_abertura, horario_fechamento),
-            )
-            row = cur.fetchone()
-            conn.commit()
-            return self._to_espaco(row)
-
-    def desativar(self, id_espaco: int) -> None:
-        with get_connection() as conn, conn.cursor() as cur:
-            cur.execute("UPDATE espaco SET ativo = FALSE WHERE id_espaco = %s", (id_espaco,))
-            conn.commit()
-
-    @staticmethod
-    def _to_espaco(row) -> Espaco:
-        return Espaco(
-            id_espaco=row["id_espaco"],
-            nome=row["nome"],
-            descricao=row["descricao"],
-            capacidade_maxima=row["capacidade_maxima"],
-            horario_abertura=row["horario_abertura"],
-            horario_fechamento=row["horario_fechamento"],
-            ativo=row["ativo"],
+    def atualizar(self, espaco, conexao=None):
+        executar(
+            "UPDATE espaco SET nome = %s, descricao = %s, capacidade_maxima = %s, "
+            "horario_abertura = %s, horario_fechamento = %s, ativo = %s "
+            "WHERE id_espaco = %s",
+            (
+                espaco.nome,
+                espaco.descricao,
+                espaco.capacidade_maxima,
+                espaco.horario_abertura,
+                espaco.horario_fechamento,
+                espaco.ativo,
+                espaco.id_espaco,
+            ),
+            conexao,
         )

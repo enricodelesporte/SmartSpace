@@ -1,0 +1,26 @@
+{% from "_icones.html" import icone %}
+{% macro cartao_reserva(reserva, token_csrf, mostrar_morador=False, origem="") %}
+<article class="card reservation {{ reserva.classe_status }}">
+  <div class="data-tile" aria-hidden="true">
+    <span class="semana">{{ reserva.data_reserva|dia_da_semana }}</span>
+    <span class="dia">{{ reserva.data_reserva|dia }}</span>
+    <span class="mes">{{ reserva.data_reserva|mes_abreviado }}</span>
+  </div>
+  <div class="reservation-info">
+    <h2>{{ reserva.nome_espaco }}</h2>
+    <p>{{ icone('calendar', 16) }}<span>{{ reserva.data_reserva|data_extenso }}</span></p>
+    <p>{{ icone('clock', 16) }}<span>{{ reserva.hora_inicio }} às {{ reserva.hora_fim }}</span></p>
+    {% if mostrar_morador %}<p>{{ icone('user', 16) }}<span>{{ reserva.nome_usuario }}</span></p>{% endif %}
+  </div>
+  <div class="status-col">
+    <span class="status {{ reserva.classe_status }}">{{ reserva.rotulo_status }}</span>
+    {% if reserva.pode_cancelar %}
+    <form method="post" action="{{ url_for('paginas_reservas.cancelar', id_reserva=reserva.id_reserva) }}" data-confirmar="Cancelar a reserva de {{ reserva.nome_espaco }} em {{ reserva.data_reserva|data_br }}?">
+      <input type="hidden" name="csrf_token" value="{{ token_csrf }}">
+      {% if origem %}<input type="hidden" name="origem" value="{{ origem }}">{% endif %}
+      <button type="submit" class="linkish">Cancelar</button>
+    </form>
+    {% endif %}
+  </div>
+</article>
+{% endmacro %}

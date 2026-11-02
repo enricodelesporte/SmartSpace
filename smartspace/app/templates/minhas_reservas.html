@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_icones.html" import icone %}
+{% from "_reservas.html" import cartao_reserva %}
+{% block title %}Minhas reservas · SmartSpace{% endblock %}
+{% block content %}
+<section>
+  <h1>Minhas reservas</h1>
+  <p class="page-sub">Acompanhe e gerencie as suas reservas.</p>
+  {% if proximas %}
+  <h2 class="secao-titulo">Próximas <span class="contagem">{{ proximas|length }}</span></h2>
+  <div class="lista">
+    {% for reserva in proximas %}{{ cartao_reserva(reserva, csrf_token()) }}{% endfor %}
+  </div>
+  {% endif %}
+  {% if historico %}
+  <h2 class="secao-titulo">Histórico <span class="contagem">{{ historico|length }}</span></h2>
+  <div class="lista">
+    {% for reserva in historico %}{{ cartao_reserva(reserva, csrf_token()) }}{% endfor %}
+  </div>
+  {% endif %}
+  {% if not proximas and not historico %}
+  <div class="vazio">
+    {{ icone('calendar', 40) }}
+    <p>Você ainda não tem reservas.</p>
+    <a class="btn btn-lime" href="{{ url_for('paginas_reservas.espacos') }}">Ver espaços</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

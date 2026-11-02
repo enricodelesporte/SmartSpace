@@ -1,66 +1,42 @@
-"""
-Rotas de autenticação: cadastro, login e logout.
-
-Por enquanto expostas como uma pequena API JSON — fácil de testar
-com curl/Postman antes de o front-end existir. Quando as telas HTML
-forem montadas, estas mesmas funções podem passar a usar
-render_template()/redirect() no lugar de jsonify(), sem mexer nos
-services por baixo.
-"""
-
-from __future__ import annotations
-
-from flask import Blueprint, jsonify, request, session
+from flask import Blueprint, g, session
 
 from app.services.auth_service import AuthService
+from app.utils.decoradores import login_obrigatorio
+from app.utils.requisicao import ler_json_obrigatorio, sucesso
 
-auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
+auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 auth_service = AuthService()
 
 
-@auth_bp.route("/cadastro", methods=["POST"])
-def cadastro():
-    """Fluxo 'Criar conta' do fluxograma."""
-    dados = request.get_json(silent=True) or {}
-    try:
-        usuario = auth_service.registrar(
-            nome=dados.get("nome", ""),
-            email=dados.get("email", ""),
-            senha=dados.get("senha", ""),
-        )
-    except ValueError as erro:
-        return jsonify({"erro": str(erro)}), 400
-
-    return jsonify({"mensagem": "Conta criada com sucesso.", "usuario": _serializar(usuario)}), 201
+@auth_bp.post("/cadastro")
+def cadastrar():
+    usuario = auth_service.cadastrar_morador(ler_json_obrigatorio())
+    return sucesso(usuario.para_dicionario(), "Conta criada com sucesso", 201)
 
 
-@auth_bp.route("/login", methods=["POST"])
-def login():
-    """Fluxo 'Login' do fluxograma."""
-    dados = request.get_json(silent=True) or {}
-    try:
-        usuario = auth_service.autenticar(
-            email=dados.get("email", ""),
-            senha=dados.get("senha", ""),
-        )
-    except ValueError as erro:
-        return jsonify({"erro": str(erro)}), 401
-
-    session["id_usuario"] = usuario.id_usuario
-    return jsonify({"mensagem": "Login realizado com sucesso.", "usuario": _serializar(usuario)})
-
-
-@auth_bp.route("/logout", methods=["POST"])
-def logout():
+@auth_bp.post("/login")
+def entrar():
+    usuario = auth_service.autenticar(ler_json_obrigatorio())
     session.clear()
-    return jsonify({"mensagem": "Sessão encerrada."})
+    session["id_usuario"] = usuario.id_usuario
+    return sucesso(usuario.para_dicionario(), "Login realizado com sucesso")
 
 
-def _serializar(usuario) -> dict:
-    """Converte o objeto Usuario num dict simples para a resposta JSON."""
-    return {
-        "id_usuario": usuario.id_usuario,
-        "nome": usuario.nome,
-        "email": usuario.email,
-        "tipo_usuario": usuario.tipo_usuario.value,
-    }
+@auth_bp.post("/logout")
+@login_obrigatorio
+def sair():
+    session.clear()
+    return sucesso(mensagem="Sessão encerrada")
+
+
+@auth_bp.get("/perfil")
+@login_obrigatorio
+def ver_perfil():
+    return sucesso(g.usuario.para_dicionario())
+
+
+@auth_bp.put("/perfil")
+@login_obrigatorio
+def editar_perfil():
+    usuario = auth_service.atualizar_perfil(g.usuario, ler_json_obrigatorio())
+    return sucesso(usuario.para_dicionario(), "Perfil atualizado com sucesso")

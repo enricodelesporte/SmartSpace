@@ -1,0 +1,11 @@
+{
+  "name": "SmartSpace",
+  "short_name": "SmartSpace",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5FBDA",
+  "theme_color": "#450C3F",
+  "icons": [
+    { "src": "/static/icons/logo.png", "sizes": "235x235", "type": "image/png" }
+  ]
+}
